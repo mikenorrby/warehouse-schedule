@@ -206,7 +206,10 @@ h2{color:#1F3864;margin-bottom:4px;}
     db.collection("schedule").doc("users").set({
       data: JSON.stringify(users),
       updated: new Date().toISOString()
+    }).then(function() {
+      console.log("[users] Push succeeded. Employee count:", Object.keys(users).length);
     }).catch(function(e) {
+      console.error("[users] Push FAILED:", e);
       var msg = document.getElementById("addMsg");
       if (msg) msg.textContent = "Saved locally only — Firebase error: " + e.message;
     });
@@ -215,14 +218,18 @@ h2{color:#1F3864;margin-bottom:4px;}
   function loadUsersFromFirebase() {
     db.collection("schedule").doc("users").get().then(function(snap) {
       if (snap.exists) {
+        console.log("[users] Firestore doc found. Raw data:", snap.data());
         var saved = JSON.parse(snap.data().data);
         if (saved && typeof saved === "object") {
           window.USERS = saved;
+          console.log("[users] Loaded", Object.keys(saved).length, "employees from Firebase.");
           if (typeof renderAdmin === "function" && document.getElementById("empTableBody")) renderAdmin();
         }
+      } else {
+        console.log("[users] No 'users' document exists in Firestore yet — using embedded USERS list.");
       }
     }).catch(function(e) {
-      // Firebase offline — keep using the embedded USERS list
+      console.error("[users] Load FAILED:", e);
     });
   }
 
