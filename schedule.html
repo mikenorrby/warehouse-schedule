@@ -202,8 +202,33 @@ h2{color:#1F3864;margin-bottom:4px;}
       });
   }
 
+  function pushUsersToFirebase(users) {
+    db.collection("schedule").doc("users").set({
+      data: JSON.stringify(users),
+      updated: new Date().toISOString()
+    }).catch(function(e) {
+      var msg = document.getElementById("addMsg");
+      if (msg) msg.textContent = "Saved locally only — Firebase error: " + e.message;
+    });
+  }
+
+  function loadUsersFromFirebase() {
+    db.collection("schedule").doc("users").get().then(function(snap) {
+      if (snap.exists) {
+        var saved = JSON.parse(snap.data().data);
+        if (saved && typeof saved === "object") {
+          window.USERS = saved;
+          if (typeof renderAdmin === "function" && document.getElementById("empTableBody")) renderAdmin();
+        }
+      }
+    }).catch(function(e) {
+      // Firebase offline — keep using the embedded USERS list
+    });
+  }
+
   window.addEventListener("load", function() {
     loadScheduleFromFirebase();
+    loadUsersFromFirebase();
   });
 </script>
 <script>
@@ -438,6 +463,7 @@ function renderAdmin(){
       } else if(action==="remove"){
         if(!confirm("Remove access for "+email+"?"))return;
         delete USERS[email];
+        pushUsersToFirebase(USERS);
       }
       renderAdmin();
     };
@@ -453,6 +479,7 @@ function addEmployee(){
   if(!name){msg.textContent="Enter a name.";return;}
   if(USERS[email]){msg.textContent="Email already exists.";return;}
   USERS[email]=name;
+  pushUsersToFirebase(USERS);
   document.getElementById("addEmail").value="";
   document.getElementById("addName").value="";
   document.getElementById("uploadMsg").textContent="Added "+name+" — default PIN: 1234";
